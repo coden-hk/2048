@@ -7,40 +7,53 @@ let stateMatrix = [
   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER]
 ]
 
-function drawMatrix () {
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < 4; j++) {
-      let level = stateMatrix[i][j]
-      level = level === BASE_NUMBER ? '' : level
-      $(`.item[data-row=${i}][data-col=${j}]`)
-        .attr('class', `item level-${level}`)
-        .text(level)
-    }
-  }
+function drawPoint (i, j) {
+  let level = stateMatrix[i][j]
 
-  let failed = true
-  let success = false
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      if (stateMatrix[i][j] === 2048) success = true
-      if (stateMatrix[i][j] === stateMatrix[i + 1][j] ||
-        stateMatrix[i][j] === stateMatrix[i][j + 1] ||
-        stateMatrix[i + 1][j] === BASE_NUMBER ||
-        stateMatrix[i][j + 1] === BASE_NUMBER ||
-        stateMatrix[i + 1][j + 1] === BASE_NUMBER
-      ) failed = false
-    }
-  }
+  let element = $('<div></div>').attr({
+    class: `item active level-${level}`,
+    style: `transform: translate3d(${j * 125 + 12.5}%,
+                ${i * 125 + 12.5}%, 0) scale(0.01); z-index: ${level}`,
+    'data-row': i,
+    'data-col': j,
+  })
+    .text(stateMatrix[i][j])
 
-  for (let i = 0; i < 4; i++) {
-    if (stateMatrix[i][3] === 2048 || stateMatrix[3][i] === 2048) {
-      success = true
-      break
-    }
-  }
+  setTimeout(() => {
+    element.attr({
+      class: `item active level-${level}`,
+      style: `transform: translate3d(${j * 125 + 12.5}%,
+                ${i * 125 + 12.5}%, 0) scale(1); z-index: ${level}`,
+      'data-row': i,
+      'data-col': j
+    })
+  }, 100)
 
-  if (failed) alert('Failed!')
-  if (success) alert('Succeed!!')
+  $(`.game-view`).append(element)
+
+  // let failed = true
+  // let success = false
+  // for (let i = 0; i < 3; i++) {
+  //   for (let j = 0; j < 3; j++) {
+  //     if (stateMatrix[i][j] === 2048) success = true
+  //     if (stateMatrix[i][j] === stateMatrix[i + 1][j] ||
+  //       stateMatrix[i][j] === stateMatrix[i][j + 1] ||
+  //       stateMatrix[i + 1][j] === BASE_NUMBER ||
+  //       stateMatrix[i][j + 1] === BASE_NUMBER ||
+  //       stateMatrix[i + 1][j + 1] === BASE_NUMBER
+  //     ) failed = false
+  //   }
+  // }
+  //
+  // for (let i = 0; i < 4; i++) {
+  //   if (stateMatrix[i][3] === 2048 || stateMatrix[3][i] === 2048) {
+  //     success = true
+  //     break
+  //   }
+  // }
+  //
+  // if (failed) alert('Failed!')
+  // if (success) alert('Succeed!!')
 
   console.log(stateMatrix)
 }
@@ -58,20 +71,25 @@ function getRandomNumber () {
 function addRandomPosition () {
   let [row, col] = getRandomNumber()
   stateMatrix[row][col] = 2
-  drawMatrix()
+  drawPoint(row, col)
 }
 
 $(document).ready(() => {
-  function gameFactory (row, col, number) {
-    let display = number === BASE_NUMBER ? '' : number
-    return `<div class="item level-${number}" data-row="${row}" data-col="${col}">${display}</div>`
+  function initFactory (row, col) {
+    return (
+      `<div class="item level-1"
+          style="left: ${col * 25 + 2.5}%; top: ${row * 25 + 2.5}%" 
+          data-row="${row}" 
+          data-col="${col}">
+      </div>`
+    )
   }
 
   let result = ''
 
   for (let i = 0; i < 4; i++) {
     for (let j = 0; j < 4; j++) {
-      result += gameFactory(i, j, stateMatrix[i][j])
+      result += initFactory(i, j)
     }
   }
   $('.game-view').html(result)
@@ -80,12 +98,12 @@ $(document).ready(() => {
 $('.restart-button').click(() => {
   started = true
 
-  stateMatrix = [
-    [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
-    [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
-    [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
-    [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER]
-  ]
+  // stateMatrix = [
+  //   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
+  //   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
+  //   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
+  //   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER]
+  // ]
 
   addRandomPosition()
 
@@ -93,66 +111,52 @@ $('.restart-button').click(() => {
 })
 
 $(document).keydown((e) => {
+  if (e.keyCode < 37 && e.keyCode > 40) return
   if (!started) return
 
-  let originState = JSON.stringify(stateMatrix)
+  $('.active').each(function (index) {
+    let row = parseInt($(this).attr('data-row'))
+    let col = parseInt($(this).attr('data-col'))
+    let value = parseInt($(this).text())
 
-  switch (e.keyCode) {
-    // Left
-    case 37:
-      for (let i = 0; i < 4; i++) {
-        for (let j = 1; j < 4; j++) {
-          if (stateMatrix[i][j - 1] === stateMatrix[i][j] ||
-            stateMatrix[i][j - 1] === BASE_NUMBER) {
-            stateMatrix[i][j - 1] += stateMatrix[i][j]
-            stateMatrix[i][j] = BASE_NUMBER
-          }
-        }
-      }
+    // Maintain State Machine
+    switch (e.keyCode) {
+      case 37:
+        if (col === 0) return
+        stateMatrix[row][col] = BASE_NUMBER
+        col -= 1
+        break
+      case 38:
+        if (row === 0) return
+        stateMatrix[row][col] = BASE_NUMBER
+        row -= 1
+        break
+      case 39:
+        if (col === 3) return
+        stateMatrix[row][col] = BASE_NUMBER
+        col += 1
+        break
+      case 40:
+        if (row === 3) return
+        stateMatrix[row][col] = BASE_NUMBER
+        row += 1
+        break
+    }
 
-      if (originState !== JSON.stringify(stateMatrix)) addRandomPosition()
-      break
-    //  Up
-    case 38:
-      for (let i = 1; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
-          if (stateMatrix[i - 1][j] === stateMatrix[i][j]
-            || stateMatrix[i - 1][j] === BASE_NUMBER) {
-            stateMatrix[i - 1][j] += stateMatrix[i][j]
-            stateMatrix[i][j] = BASE_NUMBER
-          }
-        }
-      }
+    // Maintain UI
+    $(this).attr({
+      style: `transform: translate3d(${col * 125 + 12.5}%,
+                  ${row * 125 + 12.5}%, 0);`,
+      'data-row': row,
+      'data-col': col
+    })
 
-      if (originState !== JSON.stringify(stateMatrix)) addRandomPosition()
-      break
-    //  Right
-    case 39:
-      for (let i = 0; i < 4; i++) {
-        for (let j = 2; j > -1; j--) {
-          if (stateMatrix[i][j + 1] === stateMatrix[i][j]
-            || stateMatrix[i][j + 1] === BASE_NUMBER) {
-            stateMatrix[i][j + 1] += stateMatrix[i][j]
-            stateMatrix[i][j] = BASE_NUMBER
-          }
-        }
-      }
+    stateMatrix[row][col] += value
 
-      if (originState !== JSON.stringify(stateMatrix)) addRandomPosition()
-      break
-    //  Down
-    case 40:
-      for (let i = 2; i > -1; i--) {
-        for (let j = 0; j < 4; j++) {
-          if (stateMatrix[i + 1][j] === stateMatrix[i][j]
-            || stateMatrix[i + 1][j] === BASE_NUMBER) {
-            stateMatrix[i + 1][j] += stateMatrix[i][j]
-            stateMatrix[i][j] = BASE_NUMBER
-          }
-        }
-      }
+    if (stateMatrix[row][col] !== value) {
+      drawPoint(row, col)
+    }
 
-      if (originState !== JSON.stringify(stateMatrix)) addRandomPosition()
-      break
-  }
+    console.log(stateMatrix)
+  })
 })
