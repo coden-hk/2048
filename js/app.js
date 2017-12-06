@@ -11,7 +11,13 @@ function range (start, end, step) {
   let _end = end || start
   let _start = end ? start : 0
   let _step = step || 1
-  return Array((_end - _start) / _step).fill(0).map((v, i) => _start + (i * _step))
+  if (_end < _start) {
+    let tmp = _end
+    _end = _start
+    _start = tmp
+  }
+  let _arr = Array((_end - _start) / _step).fill(0).map((v, i) => _start + (i * _step))
+  return start < end ? _arr : _arr.reverse()
 }
 
 function drawPoint (i, j) {
@@ -118,45 +124,89 @@ $('.restart-button').click(() => {
 })
 
 $(document).keydown((e) => {
+  const N = 4
   if (e.keyCode < 37 && e.keyCode > 40) return
   if (!started) return
 
+  const moveBlock = (row, col, target_row, target_col) => {
+    $(`.active[data-row=${row}][data-col=${col}]`)
+      .attr({
+        style: `transform: translate3d(${target_col * 125 + 12.5}%, ${target_row * 125 + 12.5}%, 0);`,
+        'data-row': target_row,
+        'data-col': target_col
+      })
+  }
+
   const positionController = (rowCoeff, colCoeff) => {
-    let rowRange = rowCoeff < 0 ? range(0, 4) : range(0, 4).reverse()
-    let colRange = colCoeff < 0 ? range(0, 3) : range(1, 4).reverse()
+    console.log('-----> Start')
+    let rowRange = rowCoeff < 0 ? range(1, 4) : range(0, 4)
+    let colRange = colCoeff < 0 ? range(0, 4) : range(4, 0)
 
-    let edge = colCoeff < 0 ? 0 : 3
-    let adjacent = colCoeff < 0 ? 1 : 2
+    let rowEdge = rowCoeff < 0 ? 0 : 3
+    let colEdge = colCoeff < 0 ? 0 : 3
 
-    console.log(colRange, edge, adjacent)
+    console.log(colRange)
+
     for (let row of rowRange) {
-      let edgeValue = stateMatrix[row][edge]
-      let adjacentValue = stateMatrix[row][adjacent]
-      let isEqual = edgeValue === adjacentValue && edgeValue !== 0 && adjacentValue !== 0
-      let hasZero = edgeValue === 0 || adjacentValue === 0
+      for (let col of colRange) {
+        let target_row = row, target_col = col
 
-      if (isEqual || hasZero) {
-        for (let col of colRange) {
-          if (col === edge) {
-            stateMatrix[row][edge] += stateMatrix[row][adjacent]
-            continue
+        for (let p of range(colEdge, col)) {
+          if (stateMatrix[row][p] === BASE_NUMBER) {
+            target_col = p
+          } else if (stateMatrix[row][p] === stateMatrix[row][col]) {
+            target_col = p
+            break
+          } else {
+            break;
           }
-          stateMatrix[row][col] = stateMatrix[row - rowCoeff][col - colCoeff]
-
-          $(`.active[data-row=${row}][data-col=${col}]`)
-            .attr({
-              style: `transform: translate3d(${(col + colCoeff) * 125 + 12.5}%, ${(row + rowCoeff) * 125 + 12.5}%, 0);`,
-              'data-row': row + rowCoeff,
-              'data-col': col + colCoeff
-            })
         }
-        stateMatrix[row][edge] = BASE_NUMBER
 
-        if (isEqual) {
-          drawPoint(row, 0)
-        }
+        moveBlock(row, col, target_row, target_col)
+        stateMatrix[target_row][target_col] += stateMatrix[row][col]
+        stateMatrix[row][col] = BASE_NUMBER
       }
     }
+
+
+
+    // console.log('-----> Start')
+    // let rowRange = rowCoeff < 0 ? range(0, 4).reverse() : range(0, 4)
+    // let colRange = colCoeff < 0 ? range(0, 3) : range(1, 4).reverse()
+    //
+    // let edge = colCoeff < 0 ? 0 : 3
+    // let adjacent = edge - colCoeff
+    //
+    // console.log(edge, adjacent)
+    // console.log(rowRange, colRange)
+    // for (let row of rowRange) {
+    //   let edgeValue = stateMatrix[row][edge]
+    //   let adjacentValue = stateMatrix[row][adjacent]
+    //   let isEqual = edgeValue === adjacentValue && edgeValue !== 0 && adjacentValue !== 0
+    //   let hasZero = edgeValue === 0 || adjacentValue === 0
+    //
+    //   if (isEqual || hasZero) {
+    //     for (let col of colRange) {
+    //       if (col === edge) {
+    //         stateMatrix[row][edge] += stateMatrix[row][adjacent]
+    //         continue
+    //       }
+    //       stateMatrix[row][col] = stateMatrix[row - rowCoeff][col - colCoeff]
+    //
+    //       $(`.active[data-row=${row}][data-col=${col}]`)
+    //         .attr({
+    //           style: `transform: translate3d(${(col + colCoeff) * 125 + 12.5}%, ${(row + rowCoeff) * 125 + 12.5}%, 0);`,
+    //           'data-row': row + rowCoeff,
+    //           'data-col': col + colCoeff
+    //         })
+    //     }
+    //     stateMatrix[row][N - edge] = BASE_NUMBER
+    //
+    //     if (isEqual) {
+    //       drawPoint(row, 0)
+    //     }
+    //   }
+    // }
   }
 
   switch (e.keyCode) {
