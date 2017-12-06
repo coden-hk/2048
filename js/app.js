@@ -7,6 +7,13 @@ let stateMatrix = [
   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER]
 ]
 
+function range (start, end, step) {
+  let _end = end || start
+  let _start = end ? start : 0
+  let _step = step || 1
+  return Array((_end - _start) / _step).fill(0).map((v, i) => _start + (i * _step))
+}
+
 function drawPoint (i, j) {
   let level = stateMatrix[i][j]
 
@@ -114,49 +121,58 @@ $(document).keydown((e) => {
   if (e.keyCode < 37 && e.keyCode > 40) return
   if (!started) return
 
-  $('.active').each(function (index) {
-    let row = parseInt($(this).attr('data-row'))
-    let col = parseInt($(this).attr('data-col'))
-    let value = parseInt($(this).text())
+  const positionController = (rowCoeff, colCoeff) => {
+    let rowRange = rowCoeff < 0 ? range(0, 4) : range(0, 4).reverse()
+    let colRange = colCoeff < 0 ? range(0, 3) : range(1, 4).reverse()
 
-    // Maintain State Machine
-    switch (e.keyCode) {
-      case 37:
-        if (col === 0) return
-        stateMatrix[row][col] = BASE_NUMBER
-        col -= 1
-        break
-      case 38:
-        if (row === 0) return
-        stateMatrix[row][col] = BASE_NUMBER
-        row -= 1
-        break
-      case 39:
-        if (col === 3) return
-        stateMatrix[row][col] = BASE_NUMBER
-        col += 1
-        break
-      case 40:
-        if (row === 3) return
-        stateMatrix[row][col] = BASE_NUMBER
-        row += 1
-        break
+    let edge = colCoeff < 0 ? 0 : 3
+    let adjacent = colCoeff < 0 ? 1 : 2
+
+    console.log(colRange, edge, adjacent)
+    for (let row of rowRange) {
+      let edgeValue = stateMatrix[row][edge]
+      let adjacentValue = stateMatrix[row][adjacent]
+      let isEqual = edgeValue === adjacentValue && edgeValue !== 0 && adjacentValue !== 0
+      let hasZero = edgeValue === 0 || adjacentValue === 0
+
+      if (isEqual || hasZero) {
+        for (let col of colRange) {
+          if (col === edge) {
+            stateMatrix[row][edge] += stateMatrix[row][adjacent]
+            continue
+          }
+          stateMatrix[row][col] = stateMatrix[row - rowCoeff][col - colCoeff]
+
+          $(`.active[data-row=${row}][data-col=${col}]`)
+            .attr({
+              style: `transform: translate3d(${(col + colCoeff) * 125 + 12.5}%, ${(row + rowCoeff) * 125 + 12.5}%, 0);`,
+              'data-row': row + rowCoeff,
+              'data-col': col + colCoeff
+            })
+        }
+        stateMatrix[row][edge] = BASE_NUMBER
+
+        if (isEqual) {
+          drawPoint(row, 0)
+        }
+      }
     }
+  }
 
-    // Maintain UI
-    $(this).attr({
-      style: `transform: translate3d(${col * 125 + 12.5}%,
-                  ${row * 125 + 12.5}%, 0);`,
-      'data-row': row,
-      'data-col': col
-    })
+  switch (e.keyCode) {
+    case 37:
+      positionController(0, -1)
+      break
+    case 38:
+      positionController(-1, 0)
+      break
+    case 39:
+      positionController(0, 1)
+      break
+    case 40:
+      positionController(1, 0)
+      break
+  }
+  console.log(JSON.stringify(stateMatrix))
 
-    stateMatrix[row][col] += value
-
-    if (stateMatrix[row][col] !== value) {
-      drawPoint(row, col)
-    }
-
-    console.log(stateMatrix)
-  })
 })
