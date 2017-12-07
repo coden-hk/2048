@@ -20,55 +20,40 @@ function range (start, end, step) {
   return start < end ? _arr : _arr.reverse().map((v) => v + 1)
 }
 
-function drawPoint (i, j) {
-  let level = stateMatrix[i][j]
+function drawPoint (vector) {
+  let level = stateMatrix[vector[0]][vector[1]]
 
   let element = $('<div></div>').attr({
     class: `item active level-${level}`,
-    style: `transform: translate3d(${j * 125 + 12.5}%,
-                ${i * 125 + 12.5}%, 0) scale(0.01); z-index: ${level}`,
-    'data-row': i,
-    'data-col': j,
+    style: `transform: translate3d(${vector[1] * 125 + 12.5}%,
+                ${vector[0] * 125 + 12.5}%, 0) scale(0.01); z-index: ${level}`,
+    'data-row': vector[0],
+    'data-col': vector[1],
   })
-    .text(stateMatrix[i][j])
+    .text(stateMatrix[vector[0]][vector[1]])
 
   setTimeout(() => {
     element.attr({
       class: `item active level-${level}`,
-      style: `transform: translate3d(${j * 125 + 12.5}%,
-                ${i * 125 + 12.5}%, 0) scale(1); z-index: ${level}`,
-      'data-row': i,
-      'data-col': j
+      style: `transform: translate3d(${vector[1] * 125 + 12.5}%,
+                ${vector[0] * 125 + 12.5}%, 0) scale(1); z-index: ${level}`
     })
-  }, 100)
+    setTimeout(((i, j, l) => {
+      $(`.active[data-row=${i}][data-col=${j}]`)
+        .not(`.level-${l}`)
+        .remove()
+    })(vector[0], vector[1], level), 400)
+  }, 1)
 
   $(`.game-view`).append(element)
 
-  // let failed = true
-  // let success = false
-  // for (let i = 0; i < 3; i++) {
-  //   for (let j = 0; j < 3; j++) {
-  //     if (stateMatrix[i][j] === 2048) success = true
-  //     if (stateMatrix[i][j] === stateMatrix[i + 1][j] ||
-  //       stateMatrix[i][j] === stateMatrix[i][j + 1] ||
-  //       stateMatrix[i + 1][j] === BASE_NUMBER ||
-  //       stateMatrix[i][j + 1] === BASE_NUMBER ||
-  //       stateMatrix[i + 1][j + 1] === BASE_NUMBER
-  //     ) failed = false
-  //   }
-  // }
-  //
-  // for (let i = 0; i < 4; i++) {
-  //   if (stateMatrix[i][3] === 2048 || stateMatrix[3][i] === 2048) {
-  //     success = true
-  //     break
-  //   }
-  // }
-  //
-  // if (failed) alert('Failed!')
-  // if (success) alert('Succeed!!')
-
-  console.log(stateMatrix)
+  let success = false
+  for (let i of range(0, 4)) {
+    for (let j of range(0, 4)) {
+      if (stateMatrix[i][j] === 2048) success = true
+    }
+  }
+  if (success) alert('Succeed!!')
 }
 
 function getRandomNumber () {
@@ -82,9 +67,25 @@ function getRandomNumber () {
 }
 
 function addRandomPosition () {
+  let failed = true
+  for (let i of range(0, 4)) {
+    for (let j of range(0, 4)) {
+      if (stateMatrix[i][j] === BASE_NUMBER) {
+        failed = false
+        break
+      }
+    }
+    if (!failed) break
+  }
+
+  if (failed) {
+    alert('Failed!!')
+    return
+  }
+
   let [row, col] = getRandomNumber()
   stateMatrix[row][col] = 2
-  drawPoint(row, col)
+  drawPoint([row, col])
 }
 
 $(document).ready(() => {
@@ -111,12 +112,12 @@ $(document).ready(() => {
 $('.restart-button').click(() => {
   started = true
 
-  // stateMatrix = [
-  //   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
-  //   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
-  //   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
-  //   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER]
-  // ]
+  stateMatrix = [
+    [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
+    [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
+    [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER],
+    [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER]
+  ]
 
   addRandomPosition()
 
@@ -124,124 +125,68 @@ $('.restart-button').click(() => {
 })
 
 $(document).keydown((e) => {
-  const N = 4
   if (e.keyCode < 37 && e.keyCode > 40) return
   if (!started) return
 
-  const moveBlock = (row, col, target_row, target_col) => {
-    $(`.active[data-row=${row}][data-col=${col}]`)
+  const moveBlock = (current, target) => {
+    $(`.active[data-row=${current[0]}][data-col=${current[1]}]`)
       .attr({
-        style: `transform: translate3d(${target_col * 125 + 12.5}%, ${target_row * 125 + 12.5}%, 0);`,
-        'data-row': target_row,
-        'data-col': target_col
+        style: `transform: translate3d(${target[1] * 125 + 12.5}%, ${target[0] * 125 + 12.5}%, 0);`,
+        'data-row': target[0],
+        'data-col': target[1]
       })
+
+    stateMatrix[target[0]][target[1]] += stateMatrix[current[0]][current[1]]
+    stateMatrix[current[0]][current[1]] = BASE_NUMBER
   }
 
-  const positionController = (rowCoeff, colCoeff) => {
+  const legalPosition = (vector) => ((vector[0] > -1 && vector[0] < 4) && (vector[1] > -1 && vector[1] < 4))
+
+  const positionController = (vector) => {
+    let originalState = JSON.stringify(stateMatrix)
+    let rowRange = [range(0, 4), range(0, 4), range(0, 4).reverse()][vector[0] + 1]
+    let colRange = [range(0, 4), range(0, 4), range(0, 4).reverse()][vector[1] + 1]
     console.log('-----> Start')
-    let rowRange = rowCoeff < 0 ? range(0, 4) : range(3, -1)
-    let colRange = colCoeff < 0 ? range(0, 4) : range(3, -1)
-
-    let rowEdge = rowCoeff < 0 ? 0 : 3
-    let colEdge = colCoeff < 0 ? 0 : 3
-
     for (let row of rowRange) {
       for (let col of colRange) {
-        let target_row = row, target_col = col, didChanged = false
-
-        if (rowCoeff === 0) {
-          for (let p of range(colEdge, col).reverse()) {
-            if (stateMatrix[row][p] === BASE_NUMBER) {
-              target_col = p
-            } else if (stateMatrix[row][p] === stateMatrix[row][col]) {
-              target_col = p
-              didChanged = true
-              break
-            } else {
-              break
-            }
-          }
-        } else {
-          for (let p of range(rowEdge, row).reverse()) {
-            if (stateMatrix[p][col] === BASE_NUMBER) {
-              target_row = p
-            } else if (stateMatrix[p][col] === stateMatrix[row][col]) {
-              target_row = p
-              didChanged = true
-              break
-            } else {
+        let current = [row, col]
+        let next = [row + vector[0], col + vector[1]]
+        while (legalPosition(next)) {
+          let isZero = stateMatrix[next[0]][next[1]] === BASE_NUMBER
+          let isEqual = stateMatrix[next[0]][next[1]] === stateMatrix[current[0]][current[1]] &&
+            stateMatrix[next[0]][next[1]] !== BASE_NUMBER &&
+            stateMatrix[current[0]][current[1]] !== BASE_NUMBER
+          if (isZero || isEqual) {
+            moveBlock(current, next)
+            if (isEqual) {
+              drawPoint(next)
               break
             }
+            current = next
+            next = [next[0] + vector[0], next[1] + vector[1]]
+          } else {
+            break
           }
-        }
-
-        moveBlock(row, col, target_row, target_col)
-
-        if (row !== target_row && col !== target_col) {
-          stateMatrix[target_row][target_col] += stateMatrix[row][col]
-          stateMatrix[row][col] = BASE_NUMBER
-        } else {
-        }
-        if (didChanged) {
-          console.log(row, col, target_row, target_col)
-          drawPoint(target_row, target_col)
         }
       }
     }
-
-    // console.log('-----> Start')
-    // let rowRange = rowCoeff < 0 ? range(0, 4).reverse() : range(0, 4)
-    // let colRange = colCoeff < 0 ? range(0, 3) : range(1, 4).reverse()
-    //
-    // let edge = colCoeff < 0 ? 0 : 3
-    // let adjacent = edge - colCoeff
-    //
-    // console.log(edge, adjacent)
-    // console.log(rowRange, colRange)
-    // for (let row of rowRange) {
-    //   let edgeValue = stateMatrix[row][edge]
-    //   let adjacentValue = stateMatrix[row][adjacent]
-    //   let isEqual = edgeValue === adjacentValue && edgeValue !== 0 && adjacentValue !== 0
-    //   let hasZero = edgeValue === 0 || adjacentValue === 0
-    //
-    //   if (isEqual || hasZero) {
-    //     for (let col of colRange) {
-    //       if (col === edge) {
-    //         stateMatrix[row][edge] += stateMatrix[row][adjacent]
-    //         continue
-    //       }
-    //       stateMatrix[row][col] = stateMatrix[row - rowCoeff][col - colCoeff]
-    //
-    //       $(`.active[data-row=${row}][data-col=${col}]`)
-    //         .attr({
-    //           style: `transform: translate3d(${(col + colCoeff) * 125 + 12.5}%, ${(row + rowCoeff) * 125 + 12.5}%, 0);`,
-    //           'data-row': row + rowCoeff,
-    //           'data-col': col + colCoeff
-    //         })
-    //     }
-    //     stateMatrix[row][N - edge] = BASE_NUMBER
-    //
-    //     if (isEqual) {
-    //       drawPoint(row, 0)
-    //     }
-    //   }
-    // }
+    let currentState = JSON.stringify(stateMatrix)
+    if (originalState !== currentState) addRandomPosition()
+    console.log(JSON.stringify(stateMatrix))
   }
 
   switch (e.keyCode) {
     case 37:
-      positionController(0, -1)
+      positionController([0, -1])
       break
     case 38:
-      positionController(-1, 0)
+      positionController([-1, 0])
       break
     case 39:
-      positionController(0, 1)
+      positionController([0, 1])
       break
     case 40:
-      positionController(1, 0)
+      positionController([1, 0])
       break
   }
-  console.log(JSON.stringify(stateMatrix))
-
 })
