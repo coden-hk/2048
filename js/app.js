@@ -38,11 +38,7 @@ function drawPoint (vector) {
       style: `transform: translate3d(${vector[1] * 125 + 12.5}%,
                 ${vector[0] * 125 + 12.5}%, 0) scale(1); z-index: ${level}`
     })
-    setTimeout(((i, j, l) => {
-      $(`.active[data-row=${i}][data-col=${j}]`)
-        .not(`.level-${l}`)
-        .remove()
-    })(vector[0], vector[1], level), 400)
+
   }, 1)
 
   $(`.game-view`).append(element)
