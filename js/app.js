@@ -17,7 +17,7 @@ function range (start, end, step) {
     _start = tmp
   }
   let _arr = Array((_end - _start) / _step).fill(0).map((v, i) => _start + (i * _step))
-  return start < end ? _arr : _arr.reverse()
+  return start < end ? _arr : _arr.reverse().map((v) => v + 1)
 }
 
 function drawPoint (i, j) {
@@ -139,36 +139,55 @@ $(document).keydown((e) => {
 
   const positionController = (rowCoeff, colCoeff) => {
     console.log('-----> Start')
-    let rowRange = rowCoeff < 0 ? range(1, 4) : range(0, 4)
-    let colRange = colCoeff < 0 ? range(0, 4) : range(4, 0)
+    let rowRange = rowCoeff < 0 ? range(0, 4) : range(3, -1)
+    let colRange = colCoeff < 0 ? range(0, 4) : range(3, -1)
 
     let rowEdge = rowCoeff < 0 ? 0 : 3
     let colEdge = colCoeff < 0 ? 0 : 3
 
-    console.log(colRange)
-
     for (let row of rowRange) {
       for (let col of colRange) {
-        let target_row = row, target_col = col
+        let target_row = row, target_col = col, didChanged = false
 
-        for (let p of range(colEdge, col)) {
-          if (stateMatrix[row][p] === BASE_NUMBER) {
-            target_col = p
-          } else if (stateMatrix[row][p] === stateMatrix[row][col]) {
-            target_col = p
-            break
-          } else {
-            break;
+        if (rowCoeff === 0) {
+          for (let p of range(colEdge, col).reverse()) {
+            if (stateMatrix[row][p] === BASE_NUMBER) {
+              target_col = p
+            } else if (stateMatrix[row][p] === stateMatrix[row][col]) {
+              target_col = p
+              didChanged = true
+              break
+            } else {
+              break
+            }
+          }
+        } else {
+          for (let p of range(rowEdge, row).reverse()) {
+            if (stateMatrix[p][col] === BASE_NUMBER) {
+              target_row = p
+            } else if (stateMatrix[p][col] === stateMatrix[row][col]) {
+              target_row = p
+              didChanged = true
+              break
+            } else {
+              break
+            }
           }
         }
 
         moveBlock(row, col, target_row, target_col)
-        stateMatrix[target_row][target_col] += stateMatrix[row][col]
-        stateMatrix[row][col] = BASE_NUMBER
+
+        if (row !== target_row && col !== target_col) {
+          stateMatrix[target_row][target_col] += stateMatrix[row][col]
+          stateMatrix[row][col] = BASE_NUMBER
+        } else {
+        }
+        if (didChanged) {
+          console.log(row, col, target_row, target_col)
+          drawPoint(target_row, target_col)
+        }
       }
     }
-
-
 
     // console.log('-----> Start')
     // let rowRange = rowCoeff < 0 ? range(0, 4).reverse() : range(0, 4)
