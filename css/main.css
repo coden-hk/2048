@@ -66,6 +66,7 @@ body {
     height: 90vh;
     position: relative;
     margin: 5vh;
+    overflow: hidden;
 }
 
 .container {
