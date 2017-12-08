@@ -11,6 +11,7 @@ body {
 
     border: 0;
     background: #bbae9e;
+    overflow: hidden;
 }
 
 .split-view {
@@ -93,4 +94,50 @@ body {
     font-size: 9vh;
     font-weight: 700;
     line-height: 19vh;
+}
+
+@media all and (orientation: portrait) {
+    .split-view {
+        flex-direction: column;
+    }
+
+    .split-view > .left {
+        width: 100vw;
+        height: calc(100vh - 110vw);
+    }
+
+    .split-view > .right {
+        width: 90vw;
+        height: 90vw;
+        margin: 10vw 5vw;
+
+    }
+
+    .item {
+        font-size: 9vw;
+        line-height: 19vw;
+    }
+}
+
+@media only screen
+and (min-device-width : 768px)
+and (max-device-width : 1024px)
+and (orientation : portrait) {
+    .split-view > .left {
+        display: flex;
+        justify-content: space-around;
+    }
+
+    .split-view > .left > .title {
+        width: 50vw;
+        font-size: 10vw;
+        margin: 0;
+    }
+
+    .split-view > .left > .restart-button {
+        width: 40vw;
+        height: 10vw;
+        font-size: 6vw;
+        line-height: 10vw;
+    }
 }

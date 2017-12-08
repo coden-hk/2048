@@ -120,56 +120,56 @@ $('.restart-button').click(() => {
   $('.restart-button').text('Restart!')
 })
 
-$(document).keydown((e) => {
-  if (e.keyCode < 37 && e.keyCode > 40) return
-  if (!started) return
+const moveBlock = (current, target) => {
+  $(`.active[data-row=${current[0]}][data-col=${current[1]}]`)
+    .attr({
+      style: `transform: translate3d(${target[1] * 125 + 12.5}%, ${target[0] * 125 + 12.5}%, 0);`,
+      'data-row': target[0],
+      'data-col': target[1]
+    })
 
-  const moveBlock = (current, target) => {
-    $(`.active[data-row=${current[0]}][data-col=${current[1]}]`)
-      .attr({
-        style: `transform: translate3d(${target[1] * 125 + 12.5}%, ${target[0] * 125 + 12.5}%, 0);`,
-        'data-row': target[0],
-        'data-col': target[1]
-      })
+  stateMatrix[target[0]][target[1]] += stateMatrix[current[0]][current[1]]
+  stateMatrix[current[0]][current[1]] = BASE_NUMBER
+}
 
-    stateMatrix[target[0]][target[1]] += stateMatrix[current[0]][current[1]]
-    stateMatrix[current[0]][current[1]] = BASE_NUMBER
-  }
+const legalPosition = (vector) => ((vector[0] > -1 && vector[0] < 4) && (vector[1] > -1 && vector[1] < 4))
 
-  const legalPosition = (vector) => ((vector[0] > -1 && vector[0] < 4) && (vector[1] > -1 && vector[1] < 4))
-
-  const positionController = (vector) => {
-    let originalState = JSON.stringify(stateMatrix)
-    let rowRange = [range(0, 4), range(0, 4), range(0, 4).reverse()][vector[0] + 1]
-    let colRange = [range(0, 4), range(0, 4), range(0, 4).reverse()][vector[1] + 1]
-    console.log('-----> Start')
-    for (let row of rowRange) {
-      for (let col of colRange) {
-        let current = [row, col]
-        let next = [row + vector[0], col + vector[1]]
-        while (legalPosition(next)) {
-          let isZero = stateMatrix[next[0]][next[1]] === BASE_NUMBER
-          let isEqual = stateMatrix[next[0]][next[1]] === stateMatrix[current[0]][current[1]] &&
-            stateMatrix[next[0]][next[1]] !== BASE_NUMBER &&
-            stateMatrix[current[0]][current[1]] !== BASE_NUMBER
-          if (isZero || isEqual) {
-            moveBlock(current, next)
-            if (isEqual) {
-              drawPoint(next)
-              break
-            }
-            current = next
-            next = [next[0] + vector[0], next[1] + vector[1]]
-          } else {
+const positionController = (vector) => {
+  let originalState = JSON.stringify(stateMatrix)
+  let rowRange = [range(0, 4), range(0, 4), range(0, 4).reverse()][vector[0] + 1]
+  let colRange = [range(0, 4), range(0, 4), range(0, 4).reverse()][vector[1] + 1]
+  console.log('-----> Start')
+  for (let row of rowRange) {
+    for (let col of colRange) {
+      let current = [row, col]
+      let next = [row + vector[0], col + vector[1]]
+      while (legalPosition(next)) {
+        let isZero = stateMatrix[next[0]][next[1]] === BASE_NUMBER
+        let isEqual = stateMatrix[next[0]][next[1]] === stateMatrix[current[0]][current[1]] &&
+          stateMatrix[next[0]][next[1]] !== BASE_NUMBER &&
+          stateMatrix[current[0]][current[1]] !== BASE_NUMBER
+        if (isZero || isEqual) {
+          moveBlock(current, next)
+          if (isEqual) {
+            drawPoint(next)
             break
           }
+          current = next
+          next = [next[0] + vector[0], next[1] + vector[1]]
+        } else {
+          break
         }
       }
     }
-    let currentState = JSON.stringify(stateMatrix)
-    if (originalState !== currentState) addRandomPosition()
-    console.log(JSON.stringify(stateMatrix))
   }
+  let currentState = JSON.stringify(stateMatrix)
+  if (originalState !== currentState) addRandomPosition()
+  console.log(JSON.stringify(stateMatrix))
+}
+
+$(document).keydown((e) => {
+  if (e.keyCode < 37 && e.keyCode > 40) return
+  if (!started) return
 
   switch (e.keyCode) {
     case 37:
@@ -185,4 +185,13 @@ $(document).keydown((e) => {
       positionController([1, 0])
       break
   }
+})
+
+$('.game-view').hammer({
+  direction: Hammer.DIRECTION_ALL
+}).bind('swipe', (event) => {
+  let code = event.gesture.direction
+
+  if (code === 2) positionController([0, -1])
+
 })
