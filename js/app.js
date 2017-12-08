@@ -7,6 +7,11 @@ let stateMatrix = [
   [BASE_NUMBER, BASE_NUMBER, BASE_NUMBER, BASE_NUMBER]
 ]
 
+const element = document.getElementsByClassName('game-view')[0]
+const mc = new Hammer(element)
+
+mc.get('swipe').set({direction: Hammer.DIRECTION_ALL})
+
 function range (start, end, step) {
   let _end = end || start
   let _start = end ? start : 0
@@ -39,7 +44,7 @@ function drawPoint (vector) {
                 ${vector[0] * 125 + 12.5}%, 0) scale(1); z-index: ${level}`
     })
 
-  }, 1)
+  }, 100)
 
   $(`.game-view`).append(element)
 
@@ -135,6 +140,8 @@ const moveBlock = (current, target) => {
 const legalPosition = (vector) => ((vector[0] > -1 && vector[0] < 4) && (vector[1] > -1 && vector[1] < 4))
 
 const positionController = (vector) => {
+  if (!started) return
+
   let originalState = JSON.stringify(stateMatrix)
   let rowRange = [range(0, 4), range(0, 4), range(0, 4).reverse()][vector[0] + 1]
   let colRange = [range(0, 4), range(0, 4), range(0, 4).reverse()][vector[1] + 1]
@@ -169,7 +176,6 @@ const positionController = (vector) => {
 
 $(document).keydown((e) => {
   if (e.keyCode < 37 && e.keyCode > 40) return
-  if (!started) return
 
   switch (e.keyCode) {
     case 37:
@@ -187,11 +193,8 @@ $(document).keydown((e) => {
   }
 })
 
-$('.game-view').hammer({
-  direction: Hammer.DIRECTION_ALL
-}).bind('swipe', (event) => {
-  let code = event.gesture.direction
+mc.on('swipeleft',  () => { positionController([0, -1]) })
+mc.on('swipeup',    () => { positionController([-1, 0]) })
+mc.on('swiperight', () => { positionController([0, 1]) })
+mc.on('swipedown',  () => { positionController([1, 0]) })
 
-  if (code === 2) positionController([0, -1])
-
-})
